@@ -1,5 +1,11 @@
 
 /*
+ * 
+ * Start towing ir Stop towing naudoti du atskirus mygtukus
+ * Auto retrieve veikia iki paklaidos (pvz -100m +- dar paklaida nuo isvynioto ilgio) nuo likusio sniuro iki prdzios...
+ * Po to retrievui naudoti manual buttona, kol paspaustas vyniojimas veikia, atleistas - vyniojimas stabdomas 
+ * - retrievui - inputai skirtingi (auto/manual), outputas i rele - tas pats
+ * 
 1. svarstykles  (CLK/DT) - 2, 3  pin
 2. sistemos startui/calibravimui 4 pin
 3. speedometrui - 5 pin, startas uzduodamas  gavus pirma signala, pradedamas skaiciuoti greitis ir sniuro issyvyniojimo atstumas
@@ -10,7 +16,10 @@
 8. sistemos veikimo pradziai mygtukas, optional, jei 2 neuztektu 12 pin
 9. sistemos restartui mygtukas - arduino reset
 
+* 10. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis
+
 rezultato pvz:
+
 
 Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Trauka: (neutrali/didina/mazina), Virves vyniojimas: neutralus/Ijungtas ()
 
@@ -49,7 +58,7 @@ int reelRetrieveState = 0;
 
 void setup() {
   pinMode(BTN_START_PIN, INPUT);
-  digitalWrite(BTN_START_PIN, HIGH); // turns on pull-up resistor after input
+//  digitalWrite(BTN_START_PIN, HIGH); // turns on pull-up resistor after input
 
   pinMode(SPEED_PIN, INPUT);
   pinMode(BTN_TRACK_INCREASE_PIN, INPUT);
@@ -84,18 +93,19 @@ void loop() {
 void startButtonState()
 {
   startBtnState = digitalRead(BTN_START_PIN);
-  if (startBtnState == previousStartBtnState && startBtnState == LOW && pressState > longPressTimes) {
+  if (startBtnState == previousStartBtnState && startBtnState == HIGH) {
     towingOn = !towingOn;
     if (towingOn == 1) {
       Serial.println("Towing has started!");
     } else {
       Serial.println("Towing has stopped!");
     }
-    previousStartBtnState = startBtnState;
-      pressState = 0;
+//    previousStartBtnState = startBtnState;
+//      pressState = 0;
   } else {
-     pressState++;
+//     pressState++;
   }
+  previousStartBtnState = startBtnState;
 }
 
 void readSpeed()
