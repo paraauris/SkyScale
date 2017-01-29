@@ -19,6 +19,9 @@
 
 * 11. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis , LED output pin 13
 
+*** Paspaudus stop, traukos nuemimas prasideda iki minimumo,  kol cele rodo <= 0 arba kol gaunamas signalas is variklio kad jis krastineje padetyje
+*** bus du galiniai input mygtukai ant traukos variklio, reikia rezervuoti inputus i arduino, kad nebeleisti didinti/mazinti traukos, 
+
 rezultato pvz:
 
 
@@ -45,18 +48,27 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 
 #define longPressTimes 15
 #define maxWireLength 1500
+#define rollDiameterCm 10
+#define PI 3.1415926535897932384626433832795
 
 HX711 scale(DOUT, CLK);
 
 float calibration_factor = -7050; //-7050 worked for my 440lb max scale setup
 boolean startBtnState = LOW;
 boolean previousStartBtnState = LOW;
+
 int towingOn = 0;
+unsigned long towingStartTime;
+unsigned long statePrintOutTime;
+
+unsigned long distanceStartTime;
+unsigned long reelSpinLastTime;
+
 int pressState = 0;
 
 int tractionState = 0;
 
-int wireSpeed = 0;
+double wireSpeed = 0;
 int wireLength = 0;
 
 int reelRetrieveState = 0;
@@ -89,37 +101,76 @@ void setup() {
 }
 
 void loop() {
+  
   startButtonState();
   reelState();
+  readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
   
-  if (towingOn == 1) {
+  if (towingOn == 1 && (millis() - statePrintOutTime) > 1000) {
     readScale();
-    readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
+    printSpeed();
 
     wireRetrieveState();
-    tractionControlState();
+    tractionControlState();  
   
+    statePrintOutTime = millis();
     Serial.println();
   }
   
-  delay(500); // this will be removed when getting quite enough accuracy and button state management in code
+//  delay(500); // this will be removed when getting quite enough accuracy and button state management in code
 }
 
 void startButtonState()
 {
   startBtnState = digitalRead(BTN_START_PIN);
+
   if (startBtnState == previousStartBtnState && startBtnState == HIGH) {
     towingOn = !towingOn;
     if (towingOn == 1) {
-      Serial.println("Towing has started!");
+      towingStartTime = millis();
+      distanceStartTime = towingStartTime;
+      reelSpinLastTime = distanceStartTime;
+      Serial.print("Towing has started!");
+      Serial.print(" Time:");
+      printTime();
+      
+      Serial.println();
     } else {
       Serial.println("Towing has stopped!");
+      delay(1500);
+      towingStartTime = 0;
     }
   }
   previousStartBtnState = startBtnState;
 }
 
 void readSpeed()
+{
+  if (digitalRead(SPEED_PIN) == HIGH) {
+    long currentReelSignalTime = millis();
+    long timeHasPassedAfterLastSignal = currentReelSignalTime - reelSpinLastTime;
+
+    if (timeHasPassedAfterLastSignal > 0) {
+      float ropeCirmcumferenceCm = (rollDiameterCm * PI); // 2 * PI * R = PI * D
+      wireLength = wireLength + ropeCirmcumferenceCm;
+
+      Serial.print(ropeCirmcumferenceCm);
+      Serial.print(" cm per ");
+      Serial.print(timeHasPassedAfterLastSignal);
+      Serial.println(" ms, ");
+      
+      // SPEED Km/h = m * 1000 / min * 60  = cm * 100 * 1000 / s * 60 * 60 = cm * 100 * 1000 / ms * 1000 * 60 * 60 = cm * 100 / ms * 3600
+      float ropeSpeed = (ropeCirmcumferenceCm * 100) / (timeHasPassedAfterLastSignal * 3600);
+      wireSpeed = ropeSpeed;  
+
+      reelSpinLastTime = currentReelSignalTime;  
+    } else {
+      wireSpeed = 0;
+    }
+  } 
+}
+
+void printSpeed()
 {
   Serial.print(", virves greitis: ");
   Serial.print(wireSpeed);
@@ -130,10 +181,27 @@ void readSpeed()
   } else {
     Serial.print("-");
   }
-  Serial.print(wireLength);
+  Serial.print(wireLength / 100);
   Serial.print("m, (liko: ");
-  Serial.print(maxWireLength - wireLength);
+  Serial.print(maxWireLength - wireLength / 100);
   Serial.print(" m)");
+}
+
+void printTime()
+{
+  long towingTime = millis() - towingStartTime;
+
+  long sekundes = towingTime / 1000; 
+  if (sekundes < 60) {
+    Serial.print(sekundes);
+    Serial.print(" s");  
+  } else if (sekundes > 60 && sekundes < 3600) {
+    long minutes = sekundes / 60;
+    Serial.print(minutes);
+    Serial.print(" min ");
+    Serial.print(sekundes - minutes * 60);
+    Serial.print(" s");
+  }
 }
 
 void resetScale()
@@ -151,7 +219,10 @@ void readScale()
 {
   scale.set_scale(calibration_factor); //Adjust to this calibration factor
 
-  Serial.print("Trauka: ");
+  Serial.print("Laikas nuo starto: ");
+  printTime();
+  
+  Serial.print(", Trauka: ");
   Serial.print(scale.get_units(), 0.453592); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
   // NOTE: at this moment 2.5 kgs is showing 3 kg even when wheight is swinging - it shows 4 kg...
   
@@ -164,9 +235,9 @@ void wireRetrieveState()
   int currentReelRetrieveState = reelRetrieveState;
   
   if (digitalRead(BTN_REEL_STOP_PIN) == HIGH) {
-    reelRetrieveState == 0;
+    reelRetrieveState = 0;
   } else if (digitalRead(BTN_REEL_START_PIN) == HIGH) {
-    reelRetrieveState == 1;
+    reelRetrieveState = 1;
   } 
   
   if (reelRetrieveState == 0) {
