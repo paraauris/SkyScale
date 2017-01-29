@@ -9,11 +9,11 @@
 1. svarstykles  (CLK/DT) - 2, 3  pin
 2. sistemos startui/calibravimui 4 pin
 3. speedometrui - 5 pin, startas uzduodamas  gavus pirma signala, pradedamas skaiciuoti greitis ir sniuro issyvyniojimo atstumas
-4. traukos relei IN is mygtuko +/- bus 6/7 pin  - dedati pvz i scetch'a pasijungus ant reles ir isitikinti kad veikia, esanst paspaudimui i cosole printinti rezultata
+4. traukos relei 4 IN is mygtuko +/- bus 6/7 pin  - dedati pvz i scetch'a pasijungus ant reles ir isitikinti kad veikia, esanst paspaudimui i cosole printinti rezultata
 5. traukos relei OUT is arduino IN i rele +/- bus 8/9 pin  - dedati pvz i scetch'a pasijungus ant reles ir isitikinti kad veikia, esanst paspaudimui i cosole printinti rezultata
-6. sniuro vyniojimui mygtukas IN i arduino bus 10 pin
-7. sniuro vyniojimui OUT is qruino IN i rele 11 pin
-8. sistemos veikimo pradziai mygtukas, optional, jei 2 neuztektu 12 pin
+6. sniuro vyniojimui mygtukas IN i arduino bus 11 pin
+7. sniuro vyniojimui OUT is qruino IN i rele 10 pin
+8. sniuro vyniojimo priverstinis sustabdymas - mygtukas 12 pin
 9. sistemos restartui mygtukas - arduino reset
 
 * 10. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis
@@ -33,11 +33,12 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 #define SPEED_PIN  5
 #define BTN_TRACK_INCREASE_PIN  6
 #define BTN_TRACK_DECREASE_PIN  7
-#define OUTPUT_RELAY_TRACK_INCREASE_PIN  8
-#define OUTPUT_RELAY_TRACK_DECREASE_PIN  9
-#define BTN_REEL_START_PIN 10
-#define OUTPUT_RELAY_REEL_START_PIN 11
+#define OUTPUT_RELAY_TRACK_INCREASE_PIN  8 // in current scetch output is directly without resitors connected to PIN 8
+#define OUTPUT_RELAY_TRACK_DECREASE_PIN  9 // in current scetch output is directly without resitors connected to PIN 9
+#define OUTPUT_RELAY_REEL_START_PIN 10     // in current scetch output is directly without resitors connected to PIN 10
+#define BTN_REEL_START_PIN 11
 #define BTN_REEL_STOP_PIN 12
+
 #define longPressTimes 15
 #define maxWireLength 1500
 
@@ -63,11 +64,15 @@ void setup() {
   pinMode(SPEED_PIN, INPUT);
   pinMode(BTN_TRACK_INCREASE_PIN, INPUT);
   pinMode(BTN_TRACK_DECREASE_PIN, INPUT);
-  pinMode(OUTPUT_RELAY_TRACK_INCREASE_PIN, OUTPUT);
-  pinMode(OUTPUT_RELAY_TRACK_DECREASE_PIN, OUTPUT);
+  pinMode(OUTPUT_RELAY_TRACK_INCREASE_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 8
+  pinMode(OUTPUT_RELAY_TRACK_DECREASE_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 9
+  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 10
   pinMode(BTN_REEL_START_PIN, INPUT);
   pinMode(BTN_REEL_STOP_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
-  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT);
+  
+  digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
+  digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+  digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
 
   Serial.begin(9600);
 
@@ -78,12 +83,13 @@ void setup() {
 
 void loop() {
   startButtonState();
+  wireRetrieveState();
+  tractionControlState();
   
   if (towingOn == 1) {
     readScale();
     readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
-    wireRetrieveState();
-    tractionControlState();
+   
     Serial.println();
   }
   
@@ -100,10 +106,6 @@ void startButtonState()
     } else {
       Serial.println("Towing has stopped!");
     }
-//    previousStartBtnState = startBtnState;
-//      pressState = 0;
-  } else {
-//     pressState++;
   }
   previousStartBtnState = startBtnState;
 }
@@ -150,9 +152,19 @@ void readScale()
 void wireRetrieveState()
 {
   Serial.print(", Virves vyniojimas:"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+  int currentReelRetrieveState = reelRetrieveState;
+  
+  if (digitalRead(BTN_REEL_STOP_PIN) == HIGH) {
+    reelRetrieveState == 0;
+  } else if (digitalRead(BTN_REEL_START_PIN) == HIGH) {
+    reelRetrieveState == 1;
+  } 
+  
   if (reelRetrieveState == 0) {
+    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
     Serial.print("neutralus");
   } else {
+    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
     Serial.print("IJUNGTAS");
   }
 }
@@ -170,11 +182,15 @@ void tractionControlState()
   }
   Serial.print(", Traukos pokytis:");
   if (currentTractionState > tractionState) {
+    digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
     Serial.print("didinama");
   } else if (currentTractionState < tractionState) {
+    digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
     Serial.print("mazinama");
   } else {
     Serial.print("nesikeicia");
+    digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
+    digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
   }
 }
 
