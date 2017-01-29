@@ -13,10 +13,11 @@
 5. traukos relei OUT is arduino IN i rele +/- bus 8/9 pin  - dedati pvz i scetch'a pasijungus ant reles ir isitikinti kad veikia, esanst paspaudimui i cosole printinti rezultata
 6. sniuro vyniojimui mygtukas IN i arduino bus 11 pin
 7. sniuro vyniojimui OUT is qruino IN i rele 10 pin
-8. sniuro vyniojimo priverstinis sustabdymas - mygtukas 12 pin
+8. sniuro vyniojimo priverstinis sustabdymas - mygtukas 12 pin // bus pajungtas veliau
 9. sistemos restartui mygtukas - arduino reset
+10. bugno sukimosi INPUT PIN 12 is gerkono nuo bugno
 
-* 10. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis
+* 11. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis , LED output pin 13
 
 rezultato pvz:
 
@@ -38,6 +39,9 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 #define OUTPUT_RELAY_REEL_START_PIN 10     // in current scetch output is directly without resitors connected to PIN 10
 #define BTN_REEL_START_PIN 11
 #define BTN_REEL_STOP_PIN 12
+
+#define BTN_REEL_SPIN_PIN_LED 12
+#define LED_REEL_SPIN_PIN_BUZZER 13
 
 #define longPressTimes 15
 #define maxWireLength 1500
@@ -69,6 +73,9 @@ void setup() {
   pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 10
   pinMode(BTN_REEL_START_PIN, INPUT);
   pinMode(BTN_REEL_STOP_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
+
+  pinMode(BTN_REEL_SPIN_PIN_LED, INPUT); // in current scetch led output is working on speed input
+  pinMode(LED_REEL_SPIN_PIN_BUZZER, OUTPUT); // in current scetch led output is working on speed input or BTN_REEL_SPIN_PIN_LED
   
   digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
   digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
@@ -83,13 +90,15 @@ void setup() {
 
 void loop() {
   startButtonState();
-  wireRetrieveState();
-  tractionControlState();
+  reelState();
   
   if (towingOn == 1) {
     readScale();
     readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
-   
+
+    wireRetrieveState();
+    tractionControlState();
+  
     Serial.println();
   }
   
@@ -191,6 +200,17 @@ void tractionControlState()
     Serial.print("nesikeicia");
     digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
     digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+  }
+}
+
+void reelState()
+{
+    if (digitalRead(SPEED_PIN) == HIGH || digitalRead(BTN_REEL_SPIN_PIN_LED) == HIGH) {
+    digitalWrite(LED_REEL_SPIN_PIN_BUZZER, HIGH);
+//    Serial.print(", BUGNAS SUKASI ");
+  } else {
+    digitalWrite(LED_REEL_SPIN_PIN_BUZZER, LOW);
+//    Serial.print(", bugnas nesisuka ");
   }
 }
 
