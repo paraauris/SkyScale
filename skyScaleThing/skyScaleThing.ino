@@ -36,17 +36,19 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 #define DOUT  17 //3 = > 17
 #define CLK  2
 #define BTN_START_PIN  4
-#define SPEED_PIN  5
-#define BTN_TRACK_INCREASE_PIN  6
-#define BTN_TRACK_DECREASE_PIN  7
-#define OUTPUT_RELAY_TRACK_INCREASE_PIN  8 // in current scetch output is directly without resitors connected to PIN 8
-#define OUTPUT_RELAY_TRACK_DECREASE_PIN  9 // in current scetch output is directly without resitors connected to PIN 9
-#define OUTPUT_RELAY_REEL_START_PIN 10     // in current scetch output is directly without resitors connected to PIN 10
-#define BTN_REEL_START_PIN 11
-#define BTN_REEL_STOP_PIN 12
+#define SPEED_PIN  15 // 5 => 15 sfor sparkfun
+#define BTN_TRACK_INCREASE_PIN  36 // 6 =>36
+#define BTN_TRACK_DECREASE_PIN  37 // 7 =>37
+#define BTN_TRACK_MIN_MAX_PIN  38 // traukos varikliuko galinukai
+#define OUTPUT_RELAY_TRACK_INCREASE_PIN  32 // in current scetch output is directly without resitors connected to PIN 8 =>34
+#define OUTPUT_RELAY_TRACK_DECREASE_PIN  33 // in current scetch output is directly without resitors connected to PIN 9 => 35
 
-#define BTN_REEL_SPIN_PIN_LED 12
-#define LED_REEL_SPIN_PIN_BUZZER 13
+#define OUTPUT_RELAY_REEL_START_PIN 27     // in current scetch output is directly without resitors connected to PIN 10
+#define BTN_REEL_START_AUTO_PIN 25 // starts auto retrieve on click
+#define BTN_REEL_START_MANUAL_PIN 26  // if auto is on - stops retrieve, else starts retrieve while is pressed
+
+#define BTN_REEL_SPIN_PIN_LED 18 // 12 => 18 - bugno sukimosi gerkonas
+#define LED_REEL_SPIN_PIN_BUZZER 23 // 13=>23
 
 #define longPressTimes 15
 #define maxWireLength 1500
@@ -59,6 +61,7 @@ HX711 scale(DOUT, CLK);
 
 float calibration_factor = -7050; //-7050 worked for my 440lb max scale setup
 boolean startBtnState = LOW;
+long startBtnStateChangeTime = 0;
 boolean previousStartBtnState = LOW;
 
 boolean speedBtnState = LOW;
@@ -80,28 +83,24 @@ double wireSpeed = 0;
 double wireLength = 0;
 
 int reelRetrieveState = 0;
+int reelRetrieveAutoState = 0;
 
 void setup() {
   pinMode(BTN_START_PIN, INPUT);
-//  digitalWrite(BTN_START_PIN, HIGH); // turns on pull-up resistor after input
-
   pinMode(SPEED_PIN, INPUT);
   pinMode(BTN_TRACK_INCREASE_PIN, INPUT);
   pinMode(BTN_TRACK_DECREASE_PIN, INPUT);
-  pinMode(OUTPUT_RELAY_TRACK_INCREASE_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 8
-  pinMode(OUTPUT_RELAY_TRACK_DECREASE_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 9
-  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT); // in current scetch output is directly without resitors connected to PIN 10
-  pinMode(BTN_REEL_START_PIN, INPUT);
-  pinMode(BTN_REEL_STOP_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
-
+  pinMode(OUTPUT_RELAY_TRACK_INCREASE_PIN, OUTPUT);
+  pinMode(OUTPUT_RELAY_TRACK_DECREASE_PIN, OUTPUT);
+  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT);
+  pinMode(BTN_REEL_START_AUTO_PIN, INPUT);
+  pinMode(BTN_REEL_START_MANUAL_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
   pinMode(BTN_REEL_SPIN_PIN_LED, INPUT); // in current scetch led output is working on speed input
   pinMode(LED_REEL_SPIN_PIN_BUZZER, OUTPUT); // in current scetch led output is working on speed input or BTN_REEL_SPIN_PIN_LED
-  
-  digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
-  digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+//  
   digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
 
-  Serial.begin(9600);
+  Serial.begin(115200); // 9600 => 115200 for soarkfun 
 
   // scale with HX711 calibration on each start, which makes scale to ZERO possition
   resetScale();
@@ -109,19 +108,19 @@ void setup() {
 }
 
 void loop() {
-  
   startButtonState();
   reelState();
   readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
 //  readScale();
   tractionControlState();
+  wireRetrieveState();
   
   if (towingOn == 1 && (millis() - statePrintOutTime) > 1000) {
     readScale();
     printSpeed();
 
-    wireRetrieveState();
-    tractionControlState();  
+//    wireRetrieveState();
+//    tractionControlState();  
   
     statePrintOutTime = millis();
     Serial.println();
@@ -133,9 +132,10 @@ void loop() {
 void startButtonState()
 {
   startBtnState = digitalRead(BTN_START_PIN);
-
-  if (startBtnState != previousStartBtnState && startBtnState == HIGH) {
+  
+  if (startBtnState != previousStartBtnState && startBtnState == HIGH &&  millis() - startBtnStateChangeTime > 1000) {
     towingOn = !towingOn;
+    startBtnStateChangeTime = millis();
     if (towingOn == 1) {
       towingStartTime = millis();
       distanceStartTime = towingStartTime;
@@ -223,8 +223,8 @@ void resetScale()
   scale.tare();  //Reset the scale to 0
 
   long zero_factor = scale.read_average(); //Get a baseline reading
-//  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
-//  Serial.println(zero_factor);
+  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+  Serial.println(zero_factor);
 }
 
 void readScale()
@@ -232,60 +232,79 @@ void readScale()
   scale.set_scale(calibration_factor); //Adjust to this calibration factor
 
   Serial.print("Laikas nuo starto: ");
-  printTime();
+//  printTime();
   
   Serial.print(", Trauka: ");
   Serial.print(scale.get_units(), 0.453592); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
   // NOTE: at this moment 2.5 kgs is showing 3 kg even when wheight is swinging - it shows 4 kg...
   
   Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
-//  Serial.println();
+  Serial.println();
 }
 
 void wireRetrieveState()
 {
-  Serial.print(", Virves vyniojimas:"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+//  Serial.print(", Virves vyniojimas:"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
   int currentReelRetrieveState = reelRetrieveState;
-  
-  if (digitalRead(BTN_REEL_STOP_PIN) == HIGH) {
-    reelRetrieveState = 0;
-  } else if (digitalRead(BTN_REEL_START_PIN) == HIGH) {
+
+  if (digitalRead(BTN_REEL_START_AUTO_PIN) == HIGH && reelRetrieveState == 0) {
+    reelRetrieveAutoState = 1;
     reelRetrieveState = 1;
-  } 
+  } else if (digitalRead(BTN_REEL_START_MANUAL_PIN) == LOW && reelRetrieveAutoState == 0) {
+    reelRetrieveState = 0;
+    reelRetrieveAutoState = 0;
+  } else if (digitalRead(BTN_REEL_START_MANUAL_PIN) == HIGH) {
+    if (reelRetrieveAutoState == 1) {
+      reelRetrieveAutoState = 0;
+      reelRetrieveState = 0;
+    } else {
+      reelRetrieveState = 1;  
+    }
+  }
   
   if (reelRetrieveState == 0) {
     digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
-    Serial.print("neutralus");
+//    Serial.print("neutralus");
   } else {
     digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
-    Serial.print("IJUNGTAS");
+//    Serial.print("IJUNGTAS");
   }
 }
  
 void tractionControlState()
 {
   int currentTractionState = tractionState;
-  if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH)
-  {
-    currentTractionState++;   
-  } else 
-  if (digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH)
-  {
-    currentTractionState--;    
-  }
-  Serial.print(", Traukos pokytis:");
-  if (currentTractionState > tractionState) {
-    digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
-    Serial.print("didinama");
-  } else if (currentTractionState < tractionState) {
-    digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
-    Serial.print("mazinama");
+
+  if (!(digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH)) {
+    if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == LOW)
+    {
+      currentTractionState++;   
+    } else 
+    if (digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH && digitalRead(BTN_TRACK_INCREASE_PIN) == LOW)
+    {
+      currentTractionState--;    
+    }
+//    Serial.print(", Traukos pokytis:");
+    if (currentTractionState > tractionState) {
+      digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+      digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
+//      Serial.print("didinama");
+    } else if (currentTractionState < tractionState) {
+      digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+//      Serial.print("mazinama");
+    } else {
+//      Serial.print("nesikeicia");
+      digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+    }
+//    Serial.println();
   } else {
-    Serial.print("nesikeicia");
-    digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
-    digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+//      Serial.print("ATJUGTA DEL DVIGUBO PASPAUDIMO");
+      digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+//      Serial.println();
   }
-  Serial.println();
 }
 
 void reelState()
