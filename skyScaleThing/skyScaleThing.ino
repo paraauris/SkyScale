@@ -157,8 +157,9 @@ void setup() {
 
 void loop() {
 //  tractionControlState();  
+  towingOn = 1;
   tractionControlStateSimple();
-  startButtonState();
+//  startButtonState();
 //  wireRetrieveState();
   readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
   
