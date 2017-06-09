@@ -50,9 +50,9 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 #define OUTPUT_RELAY_TRACK_INCREASE_PIN  18 // 8 //32 // in current scetch output is directly without resitors connected to PIN 8 =>34
 #define OUTPUT_RELAY_TRACK_DECREASE_PIN  19 // 9 //33 // in current scetch output is directly without resitors connected to PIN 9 => 35
 
-#define OUTPUT_RELAY_REEL_START_PIN 17 // 27     // in current scetch output is directly without resitors connected to PIN 10
+//#define OUTPUT_RELAY_REEL_START_PIN 17 // 27     // in current scetch output is directly without resitors connected to PIN 10
 //#define BTN_REEL_START_AUTO_PIN 25 // starts auto retrieve on click
-#define BTN_REEL_START_MANUAL_PIN 15 // 26  // if auto is on - stops retrieve, else starts retrieve while is pressed
+//#define BTN_REEL_START_MANUAL_PIN 15 // 26  // if auto is on - stops retrieve, else starts retrieve while is pressed
 
 //#define BTN_REEL_SPIN_PIN_LED 12 //18 // 12 => 18 - bugno sukimosi gerkonas
 //#define LED_REEL_SPIN_PIN_BUZZER 13 //23 // 13=>23
@@ -72,6 +72,8 @@ Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Tr
 
 #define tractionWorkingTime 50 // 100
 #define timeForTractionOff 500 // 300
+
+#define autoRetrievePressTime 5000
 
 HX711 scale(DOUT, CLK);
 
@@ -111,8 +113,11 @@ double wireLength = 0;
 
 double lastTraction = 0;
 
-int reelRetrieveState = 0;
-int reelRetrieveAutoState = 0;
+long reelRetrieveState = 0;
+long reelRetrieveAutoState = 0;
+
+boolean autoRetrieveState = LOW;
+long autoRetrievePressTimeOn = 0;
 
 void setup() {
   pinMode(BTN_START_PIN, INPUT);
@@ -121,25 +126,25 @@ void setup() {
   pinMode(BTN_TRACK_DECREASE_PIN, INPUT);
   pinMode(OUTPUT_RELAY_TRACK_INCREASE_PIN, OUTPUT);
   pinMode(OUTPUT_RELAY_TRACK_DECREASE_PIN, OUTPUT);
-  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT);
-  pinMode(BTN_REEL_START_MANUAL_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
+//  pinMode(OUTPUT_RELAY_REEL_START_PIN, OUTPUT);
+//  pinMode(BTN_REEL_START_MANUAL_PIN, INPUT); // start/stop button can't be used the same one, we can use only internal state for it
 
   digitalWrite(BTN_START_PIN, LOW);
-  digitalWrite(BTN_REEL_START_MANUAL_PIN, LOW);
+//  digitalWrite(BTN_REEL_START_MANUAL_PIN, LOW);
   digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
   digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
-  digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
+//  digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
   digitalWrite(BTN_TRACK_INCREASE_PIN, LOW);
   digitalWrite(BTN_TRACK_DECREASE_PIN, LOW);
   digitalWrite(SPEED_PIN, LOW);
   
   Serial.begin(115200); // 9600 => 115200 for soarkfun 
 
-  // set up the LCD's number of columns and rows:
+  // set up the LCD's number of colum5ns and rows:
   lcd.begin(16, 2);
   // Print a message to the LCD.
   lcd.setCursor(0,1);
-  lcd.print(" SkyScale v1.0.0");
+  lcd.print(" SkyScale v1.0.1");
   lcd.setCursor(2,0);
   lcd.print("Waiting start!");
 
@@ -151,9 +156,10 @@ void setup() {
 }
 
 void loop() {
-  tractionControlState();  
+//  tractionControlState();  
+  tractionControlStateSimple();
   startButtonState();
-  wireRetrieveState();
+//  wireRetrieveState();
   readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
   
   if ((millis() - statePrintOutTime) > printOutDelay) {
@@ -331,39 +337,94 @@ void readScale()
   Serial.println();
 }
 
-void wireRetrieveState()
+//void wireRetrieveState()
+//{
+////  Serial.print(", Virves vyniojimas:"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+//  int currentReelRetrieveState = reelRetrieveState;
+//
+////  if (digitalRead(BTN_REEL_START_AUTO_PIN) == HIGH && reelRetrieveState == 0) {
+////    reelRetrieveAutoState = 1;
+////    reelRetrieveState = 1;
+////  } else vynioja
+//
+////#define autoRetrievePressTime 5000
+////boolean autoRetrieveState = LOW;
+////autoRetrievePressTimeOn
+//
+////
+//  if (digitalRead(BTN_REEL_START_MANUAL_PIN) == HIGH && autoRetrieveState == LOW && autoRetrievePressTimeOn == 0) {
+//    autoRetrievePressTimeOn = millis();
+//  }
+//  
+//  if (reelRetrieveState == 1 && millis() - autoRetrievePressTimeOn >= autoRetrievePressTime && autoRetrievePressTimeOn > 0) {
+//    autoRetrieveState = HIGH;
+//    autoRetrievePressTimeOn = -1;
+//  }
+//
+//  if (digitalRead(BTN_REEL_START_MANUAL_PIN) == LOW && autoRetrieveState == LOW) {
+//    autoRetrieveState = LOW;
+//    reelRetrieveState = 0;
+////    Serial.print(" neutralus ");
+//  } else if (digitalRead(BTN_REEL_START_MANUAL_PIN) == LOW && autoRetrieveState == HIGH) {
+//      reelRetrieveState = 1;
+//      autoRetrievePressTimeOn = 0;
+//  } else if (digitalRead(BTN_REEL_START_MANUAL_PIN) == HIGH) {
+////    Serial.print(" vynioja ");
+//    if (autoRetrieveState == HIGH && autoRetrievePressTimeOn == 0) {
+//      autoRetrieveState = LOW;
+//      reelRetrieveState = 0;
+//    } else {
+//      reelRetrieveState = 1;  
+//    }
+//  }
+//  
+//  if (reelRetrieveState == 1) {
+//    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
+////    Serial.print("neutralus");
+//  } else {
+//    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
+////    Serial.print("IJUNGTAS");
+//  }
+//}
+
+void tractionControlStateSimple()
 {
-//  Serial.print(", Virves vyniojimas:"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
-  int currentReelRetrieveState = reelRetrieveState;
+  long currentTractionState = tractionState;
 
-//  if (digitalRead(BTN_REEL_START_AUTO_PIN) == HIGH && reelRetrieveState == 0) {
-//    reelRetrieveAutoState = 1;
-//    reelRetrieveState = 1;
-//  } else vynioja
+  if (!(digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH)) {
 
-if (digitalRead(BTN_REEL_START_MANUAL_PIN) == LOW && reelRetrieveAutoState == 0) {
-    reelRetrieveAutoState = 0;
-    reelRetrieveState = 0;
-//    Serial.print(" neutralus ");
-  } else if (digitalRead(BTN_REEL_START_MANUAL_PIN) == HIGH) {
-//    Serial.print(" vynioja ");
-    if (reelRetrieveAutoState == 1) {
-      reelRetrieveAutoState = 0;
-      reelRetrieveState = 0;
-    } else {
-      reelRetrieveState = 1;  
-    }
-  }
-  
-  if (reelRetrieveState == 1) {
-    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, HIGH);
-//    Serial.print("neutralus");
-  } else {
-    digitalWrite(OUTPUT_RELAY_REEL_START_PIN, LOW);
-//    Serial.print("IJUNGTAS");
+      if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == LOW)
+      {
+//      Serial.println(" reikia didinati ");
+        currentTractionState++;   
+      } else 
+      if (digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH && digitalRead(BTN_TRACK_INCREASE_PIN) == LOW)
+      {
+//      Serial.println(" reikia mazinti ");
+        currentTractionState--;    
+      }
+
+      if (currentTractionState > tractionState) {
+        digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+        digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, HIGH);
+      } else if (currentTractionState < tractionState){
+        digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+        digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      } else {
+        digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+        digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      }
+//    Serial.println();
+  } else if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH) {
+//      Serial.print("ATJUGTA DEL DVIGUBO PASPAUDIMO");
+      digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+      digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
+//      Serial.println();
+      lcd.setCursor(1,0);
+      lcd.print ("V");
   }
 }
- 
+
 void tractionControlState()
 {
   long currentTractionState = tractionState;
