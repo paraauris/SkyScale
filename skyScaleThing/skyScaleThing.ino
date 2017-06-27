@@ -158,7 +158,7 @@ void setup() {
 void loop() {
 //  tractionControlState();  
   towingOn = 1;
-  tractionControlStateSimple();
+//  tractionControlStateSimple();
 //  startButtonState();
 //  wireRetrieveState();
   readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
@@ -308,7 +308,7 @@ void readScale()
 
   Serial.print("Laikas nuo starto: ");
   printTime();
-  double traction = -weight * scale.get_units();
+  double traction = weight * scale.get_units();
 
   if (traction < 0) {
     Serial.print(", Neigiama:");
@@ -396,12 +396,12 @@ void tractionControlStateSimple()
 
       if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == LOW)
       {
-//      Serial.println(" reikia didinati ");
+      Serial.println(" reikia didinati ");
         currentTractionState++;   
       } else 
       if (digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH && digitalRead(BTN_TRACK_INCREASE_PIN) == LOW)
       {
-//      Serial.println(" reikia mazinti ");
+      Serial.println(" reikia mazinti ");
         currentTractionState--;    
       }
 
@@ -411,16 +411,17 @@ void tractionControlStateSimple()
       } else if (currentTractionState < tractionState){
         digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
         digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
-      } else {
-        digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
-        digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
-      }
-//    Serial.println();
+      } 
+//      else {
+//        digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, LOW);
+//        digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
+//      }
+//    Serial.println("asasasas");
   } else if (digitalRead(BTN_TRACK_INCREASE_PIN) == HIGH && digitalRead(BTN_TRACK_DECREASE_PIN) == HIGH) {
-//      Serial.print("ATJUGTA DEL DVIGUBO PASPAUDIMO");
+      Serial.print("ATJUGTA DEL DVIGUBO PASPAUDIMO");
       digitalWrite(OUTPUT_RELAY_TRACK_INCREASE_PIN, LOW);
       digitalWrite(OUTPUT_RELAY_TRACK_DECREASE_PIN, HIGH);
-//      Serial.println();
+//      Serial.println("dvigubas");
       lcd.setCursor(1,0);
       lcd.print ("V");
   }
