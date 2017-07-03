@@ -62,7 +62,7 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 float calibration_factor = -7050; //-7050 worked for my 440lb max scale setup
 
-double rollDiameterCm = 10;
+double rollDiameterCm = 8.75796;
 double maxWireLength = 1500;
 
 boolean startBtnState = LOW;
@@ -119,6 +119,8 @@ void loop() {
     {
       lcd.setCursor(0,1);
       lcd.print ("               ");
+      lcd.setCursor(12,1);
+      lcd.print ("km/h");
     }
     readScale();
     
@@ -183,9 +185,9 @@ void printSpeed()
   lcd.setCursor(0,1);
   lcd.print ("     ");
 
-  lcd.setCursor(12,1);
-  lcd.print ("    ");
-  lcd.setCursor(12,1);
+  lcd.setCursor(9,1);
+  lcd.print ("   ");
+  lcd.setCursor(9,1);
   lcd.print ((long)wireSpeed);
   
   Serial.print(" km/h, isivyniojo: ");
@@ -207,7 +209,7 @@ void printSpeed()
     lcd.setCursor(0,1);
   }
   lcd.print ((long)(wireLength / 100));
-  lcd.print ("m");
+  lcd.print (" m");
   
   Serial.print("m, (liko: ");
   Serial.print((long)(maxWireLength - wireLength / 100));
