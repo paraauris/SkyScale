@@ -250,7 +250,7 @@ void readScale()
 
   Serial.print("Laikas nuo starto: ");
   printTime();
-  double traction = weight * scale.get_units();
+  double traction = 2 * weight * scale.get_units();
 
   if (traction < 0) {
     Serial.print(", Neigiama:");
