@@ -91,7 +91,7 @@ double lastTraction = 0;
 
 void setup() {
   pinMode(SPEED_PIN, INPUT);
-  digitalWrite(SPEED_PIN, HIGH);
+  digitalWrite(SPEED_PIN, LOW);
   
   Serial.begin(115200); // 9600 => 115200 for soarkfun 
 
@@ -140,11 +140,11 @@ void readSpeed()
 
   speedBtnState = digitalRead(SPEED_PIN);
 
-    if (speedBtnState == LOW && previousSpeedBtnState == HIGH) {
+    if (speedBtnState == HIGH && previousSpeedBtnState == LOW) {
         speedSignalStarted = true;
     }
 
-    if (speedSignalStarted && previousSpeedBtnState == LOW) {  
+    if (speedSignalStarted && previousSpeedBtnState == HIGH) {  
       speedSignalStarted = false;
   
       double ropeCirmcumferenceCm = (rollDiameterCm * PI); // 2 * PI * R = PI * D
@@ -169,7 +169,7 @@ void readSpeed()
     } 
   else if (timeHasPassedAfterLastSignal > minimalDelayForSpeedReel) {    
      wireSpeed = 0;
-     previousSpeedBtnState = HIGH;
+     previousSpeedBtnState = LOW;
   }
 
   if (speedBtnState != previousSpeedBtnState) {
