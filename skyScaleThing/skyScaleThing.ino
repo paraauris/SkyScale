@@ -1,4 +1,5 @@
 
+
 /*
  * 
  * Start towing ir Stop towing naudoti du atskirus mygtukus
@@ -16,19 +17,12 @@
 8. sniuro vyniojimo priverstinis sustabdymas - mygtukas 12 pin // bus pajungtas veliau
 9. sistemos restartui mygtukas - arduino reset
 10. bugno sukimosi INPUT PIN 12 is gerkono nuo skriemulio
-
 * 11. bugno sukimuisi INPUT - o OUTPUT buzzer/sviesdiodis , LED output pin 13 (situos du galima pajungti ne prie qrduino o tiesiog atskirai)
-
 *** Paspaudus stop, traukos nuemimas prasideda iki minimumo,  kol cele rodo <= 0 arba kol gaunamas signalas is variklio kad jis krastineje padetyje
 *** bus du galiniai input mygtukai ant traukos variklio, reikia rezervuoti inputus i arduino, kad nebeleisti didinti/mazinti traukos, 
-
 *** TODO: nedaleisti programiskai kad vienu metu trauka butu ir didinama ir mazinama
-
 rezultato pvz:
-
-
 Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Trauka: (neutrali/didina/mazina), Virves vyniojimas: neutralus/Ijungtas ()
-
  */
 
 #include "HX711.h"
@@ -91,7 +85,7 @@ double lastTraction = 0;
 
 void setup() {
   pinMode(SPEED_PIN, INPUT);
-  digitalWrite(SPEED_PIN, LOW);
+  digitalWrite(SPEED_PIN, HIGH);
   
   Serial.begin(115200); // 9600 => 115200 for soarkfun 
 
@@ -140,18 +134,18 @@ void readSpeed()
 
   speedBtnState = digitalRead(SPEED_PIN);
 
-    if (speedBtnState == HIGH && previousSpeedBtnState == LOW) {
+    if (speedBtnState == LOW && previousSpeedBtnState == HIGH) {
         speedSignalStarted = true;
     }
-
-    if (speedSignalStarted && previousSpeedBtnState == HIGH) {  
+                                           // sketchas kuris dirba su Hall'o sensoriumi.
+    if (speedSignalStarted && previousSpeedBtnState == LOW) {  
       speedSignalStarted = false;
   
       double ropeCirmcumferenceCm = (rollDiameterCm * PI); // 2 * PI * R = PI * D
       wireLength = wireLength + ropeCirmcumferenceCm;
       
       if (timeHasPassedAfterLastSignal > 0) {
-        // SPEED Km/h = m * 1000 / min * 60  = cm * 100 * 1000 / s * 60 * 60 = cm * 100 * 1000 / ms * 1000 * 60 * 60 = cm * 100000 / ms * 3600 * 1000 = cm * 10 / ms * 3600
+                                          // SPEED Km/h = m * 1000 / min * 60  = cm * 100 * 1000 / s * 60 * 60 = cm * 100 * 1000 / ms * 1000 * 60 * 60 = cm * 100000 / ms * 3600 * 1000 = cm * 10 / ms * 3600
         double ropeSpeed = (ropeCirmcumferenceCm * 1000) / (timeHasPassedAfterLastSignal * 36);
         
         wireSpeed = ropeSpeed;  
@@ -169,7 +163,7 @@ void readSpeed()
     } 
   else if (timeHasPassedAfterLastSignal > minimalDelayForSpeedReel) {    
      wireSpeed = 0;
-     previousSpeedBtnState = LOW;
+     previousSpeedBtnState = HIGH;
   }
 
   if (speedBtnState != previousSpeedBtnState) {
@@ -250,8 +244,8 @@ void readScale()
 
   Serial.print("Laikas nuo starto: ");
   printTime();
-  double traction = 2 * weight * scale.get_units();
-
+  double traction = 1.15 * weight * scale.get_units(); // daugiklis prinktas be virsutinio kasetės ritinuko, virvė eina tiesiai per vamzdžio centrą.
+                                                    
   if (traction < 0) {
     Serial.print(", Neigiama:");
     Serial.println(traction);
@@ -297,4 +291,3 @@ void readScale()
   Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
   Serial.println();
 }
-
