@@ -25,10 +25,7 @@ rezultato pvz:sketchas kuris
 Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Trauka: (neutrali/didina/mazina), Virves vyniojimas: neutralus/Ijungtas ()
  */
 
-//#include "HX711_ESP.h"
 #include "HX711.h"
-
-//#include <LiquidCrystal.h>
 
 #include <VirtuinoESP.h>
 #include <Virtuino_ESP_WifiServer.h>
@@ -52,9 +49,23 @@ Virtuino_ESP_WifiServer virtuino(&server);
 
 /// for virtuino END
 
-#define DOUT  12 //D3//3 //17 //3 = > 17
-#define CLK  13 //D2//2 D5, D6
-#define SPEED_PIN 14// 12 //16 //15 // 5 => 15 sfor sparkfun
+#define DOUT  12 // D6 aka GPIO12
+#define CLK  13 //  D7 aka GPIO13
+#define VTRACTION 30 // Virtual 30
+
+#define VDOWN 1 // Virtual
+
+#define TENTION_DOWN D0 // D0 aka GPIO16
+#define TENTION_UP D1 // D1 aka GPIO5
+
+#define REWIND D2 // D2 aka GPIO4
+#define EMERGENCY_CUTTER D5 // D5 aka GPIO14
+
+#define RESET D3 // D1 aka GPIO5
+
+#define SPEED_PIN D8 // D8 aga GPIO15
+#define SPEED_VIRTUAL 31 // Virtual 31
+#define DISTANCE_VIRTUAL 29 // Virtual 29
 
 #define longPressTimes 15
 #define minimalDelayForSpeedReel 2000
@@ -110,20 +121,15 @@ HX711 scale(DOUT, CLK);
 
 void setup() {
 
-  pinMode(SPEED_PIN, INPUT);
-//  pinMode(DOUT, INPUT);
-//  pinMode(CLK, INPUT);
-//  digitalWrite(SPEED_PIN, HIGH);
-//  
-//  Serial.begin(115200); // 9600 => 115200 for soarkfun 
-//
-//  // set up the LCD's number of colum5ns and rows:
-//  lcd.begin(16, 2);
-//  // Print a message to the LCD.
-//  lcd.setCursor(0,1);
-//  lcd.print(" SkyScale v1.2.1");
-//  lcd.setCursor(2,0);
-//  lcd.print("Waiting start!");
+  pinMode(TENTION_DOWN,OUTPUT);
+  digitalWrite(TENTION_DOWN, 0);
+  pinMode(TENTION_UP,OUTPUT);
+  digitalWrite(TENTION_UP, 0);
+  pinMode(REWIND,OUTPUT);
+  digitalWrite(REWIND, 0);
+  pinMode(EMERGENCY_CUTTER,OUTPUT);
+  digitalWrite(EMERGENCY_CUTTER, 0);
+
 
   startBtnStateChangeTime = millis();
   Serial.println("Pause before scale initialisation");
@@ -145,10 +151,10 @@ void setupVirtuino() {
   Serial.begin(115200);                          // Enable this line only if DEBUG=true
   delay(10);
 
-  //----- NodeMCU module settings
-  //----- prepare GPIO2
-  pinMode(2, OUTPUT);
-  digitalWrite(2, 0);
+  pinMode(VTRACTION, OUTPUT);
+  digitalWrite(VTRACTION, 0);
+  
+  pinMode(VTRACTION, OUTPUT);
   
   //----  1. Settings as Station - Connect to a WiFi network
 //  Serial.println("Connecting to "+String(ssid));
@@ -181,8 +187,19 @@ void setupVirtuino() {
   Serial.println("Server started");
 
  //---- Enter your setup code below
+
+  pinMode(TENTION_DOWN,OUTPUT);
+  digitalWrite(TENTION_DOWN, 0);
+  pinMode(TENTION_UP,OUTPUT);
+  digitalWrite(TENTION_UP, 0);
+  pinMode(REWIND,OUTPUT);
+  digitalWrite(REWIND, 0);
+  pinMode(EMERGENCY_CUTTER,OUTPUT);
+  digitalWrite(EMERGENCY_CUTTER, 0);
   
-  pinMode(D4,OUTPUT);             // On Virtuino panel add a switch to pin D4 to enable or disable the board led
+  
+  
+//  pinMode(D4,OUTPUT);             // On Virtuino panel add a switch to pin D4 to enable or disable the board led
 //  pinMode(D3,OUTPUT);            // connect a relay or a led to this pin.  On Virtuino panel add a switch to pin D3
 //  pinMode(D5,INPUT);            // connect a switch.  On Virtuino panel add a Led to pin D5
  
@@ -190,6 +207,34 @@ void setupVirtuino() {
 
 void loop() {
   virtuino.run();
+
+
+
+int v=virtuino.vDigitalMemoryRead(0);              // Read virtual memory 0 from Virtuino app 
+   if (v!=storedValue) {                          
+    Serial.println("-------TENTION DOWN is changed to="+String(v));
+    if (v==1) digitalWrite(TENTION_DOWN,1);
+    else digitalWrite(TENTION_DOWN,0);
+    
+    Serial.println("-------TENTION UP is changed to="+String(v));
+    if (v==1) digitalWrite(TENTION_UP,1);
+    else digitalWrite(TENTION_UP,0);
+    
+   Serial.println("-------REWIND is changed to="+String(v));
+    if (v==1) digitalWrite(REWIND,1);
+    else digitalWrite(REWIND,0);
+
+    Serial.println("-------CUTTER is changed to="+String(v));
+    if (v==1) digitalWrite(EMERGENCY_CUTTER,1);
+    else digitalWrite(EMERGENCY_CUTTER,0);
+    storedValue=v;
+
+   // Serial.println("-------Virtual pin DV5 is changed to="+String(v));
+   // if (v==1) digitalRead(D5,1);
+   // else digitalWrite(D5,0);
+   // storedValue=v;
+    
+   }
 
 // virtuino 
 // enter your loop code here.
@@ -230,15 +275,15 @@ void loop() {
   if ((millis() - statePrintOutTime) > printOutDelay) {
     if (statePrintOutTime == 0) 
     {
-      lcd.setCursor(0,1);
-      lcd.print ("               ");
-      lcd.setCursor(12,1);
-      lcd.print ("km/h");
+//      lcd.setCursor(0,1);
+//      lcd.print ("               ");
+//      lcd.setCursor(12,1);
+//      lcd.print ("km/h");
     }
     readScale();
     
     if (towingOn == 1) {
-      printSpeed();
+//      printSpeed();
     }
     statePrintOutTime = millis();
     Serial.println();
@@ -358,6 +403,7 @@ void resetScale()
   Serial.println(zero_factor);
 }
 
+void readScale() 
 {
   scale.set_scale(calibration_factor); //Adjust to this calibration factor
 
@@ -413,7 +459,7 @@ void resetScale()
 //  }
 //  
 //  lcd.print (traction, weightDelimiter);
-  virtuino.vMemoryWrite(2,traction);
+  virtuino.vMemoryWrite(VTRACTION,traction);
 
   Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
   Serial.println();
