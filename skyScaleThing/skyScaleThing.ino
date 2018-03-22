@@ -25,7 +25,9 @@ rezultato pvz:sketchas kuris
 Trauka: 21.1 kg, virves greitis: 10 km/h, isivyniojo: +243 m, (liko: 1350 m), Trauka: (neutrali/didina/mazina), Virves vyniojimas: neutralus/Ijungtas ()
  */
 
+//#include "HX711_ESP.h"
 #include "HX711.h"
+
 //#include <LiquidCrystal.h>
 
 #include <VirtuinoESP.h>
@@ -40,20 +42,19 @@ const char* ssid = "TP-LINK_F76812";
 const char* password = "00360852";
 WiFiServer server(8000);                      // Server port
 
-
 Virtuino_ESP_WifiServer virtuino(&server);
 //NodeMCU ESP8266 pins= D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10
 
 // Example variables
  int storedValue = 0;
- int counter = 0;
+ int counter = 0; 
  long storedTime = 0;
 
 /// for virtuino END
 
-#define DOUT  D5//3 //17 //3 = > 17
-#define CLK  D6//2 D5, D6
-#define SPEED_PIN  12 //16 //15 // 5 => 15 sfor sparkfun
+#define DOUT  12 //D3//3 //17 //3 = > 17
+#define CLK  13 //D2//2 D5, D6
+#define SPEED_PIN 14// 12 //16 //15 // 5 => 15 sfor sparkfun
 
 #define longPressTimes 15
 #define minimalDelayForSpeedReel 2000
@@ -105,12 +106,13 @@ double wireLength = 0;
 
 double lastTraction = 0;
 
+HX711 scale(DOUT, CLK);
+
 void setup() {
 
-  setupVirtuino();
-
-  
-//  pinMode(SPEED_PIN, INPUT);
+  pinMode(SPEED_PIN, INPUT);
+//  pinMode(DOUT, INPUT);
+//  pinMode(CLK, INPUT);
 //  digitalWrite(SPEED_PIN, HIGH);
 //  
 //  Serial.begin(115200); // 9600 => 115200 for soarkfun 
@@ -127,10 +129,11 @@ void setup() {
   Serial.println("Pause before scale initialisation");
   delay(10000);
   Serial.println("Now lets begin scale initialisation");
-  HX711 scale(DOUT, CLK);
   Serial.println("Succeeded scale initialisation");
   // scale with HX711 calibration on each start, which makes scale to ZERO possition
-//  resetScale();
+  resetScale();
+
+  setupVirtuino();
 }
 
 void setupVirtuino() {
@@ -148,23 +151,23 @@ void setupVirtuino() {
   digitalWrite(2, 0);
   
   //----  1. Settings as Station - Connect to a WiFi network
-  Serial.println("Connecting to "+String(ssid));
-  
-   // If you don't want to config IP manually disable the next four lines
-  IPAddress ip(192, 168, 2, 150);            // where 150 is the desired IP Address   
-  IPAddress gateway(192, 168, 2, 1);         // set gateway to match your network
-  IPAddress subnet(255, 255, 255, 0);        // set subnet mask to match your network
-  WiFi.config(ip, gateway, subnet);          // If you don't want to config IP manually disable this line
-  
-  WiFi.mode(WIFI_STA);                       // Config module as station only.
-  WiFi.begin(ssid, password);
-   while (WiFi.status() != WL_CONNECTED) {
-     delay(500);
-     Serial.print(".");
-    }
-   Serial.println("");
-   Serial.println("WiFi connected");
-   Serial.println(WiFi.localIP());
+//  Serial.println("Connecting to "+String(ssid));
+//  
+//   // If you don't want to config IP manually disable the next four lines
+//  IPAddress ip(192, 168, 2, 150);            // where 150 is the desired IP Address   
+//  IPAddress gateway(192, 168, 2, 1);         // set gateway to match your network
+//  IPAddress subnet(255, 255, 255, 0);        // set subnet mask to match your network
+//  WiFi.config(ip, gateway, subnet);          // If you don't want to config IP manually disable this line
+//  
+//  WiFi.mode(WIFI_STA);                       // Config module as station only.
+//  WiFi.begin(ssid, password);
+//   while (WiFi.status() != WL_CONNECTED) {
+//     delay(500);
+//     Serial.print(".");
+//    }
+//   Serial.println("");
+//   Serial.println("WiFi connected");
+//   Serial.println(WiFi.localIP());
  
   //----   2. Settings as Access point - Create a private Wifi Network. Enable the next five lines to use module as Acces point 
    Serial.print("Setting soft-AP ... ");                   // Default IP: 192.168.4.1
@@ -195,13 +198,13 @@ void loop() {
    
    //--- example 1  Enable or disable the board led using virtual pin
    //--- On Virtuino app panel add a Switch to Virtual Pin 0 to enable or disable the nodemcu board led
-   int v=virtuino.vDigitalMemoryRead(0);              // Read virtual memory 0 from Virtuino app 
-   if (v!=storedValue) {                          
-    Serial.println("-------Virtual pin DV0 is changed to="+String(v));
-    if (v==1) digitalWrite(D4,0);
-    else digitalWrite(D4,1);
-    storedValue=v;
-   }
+//   int v=virtuino.vDigitalMemoryRead(0);              // Read virtual memory 0 from Virtuino app 
+//   if (v!=storedValue) {                          
+//    Serial.println("-------Virtual pin DV0 is changed to="+String(v));
+//    if (v==1) digitalWrite(D4,0);
+//    else digitalWrite(D4,1);
+//    storedValue=v;
+//   }
 
 
     //----  Example 2
@@ -212,31 +215,31 @@ void loop() {
     //---- Example 3 
     //---- Create a counter every 5 seconds 
     //---- Use this technique. Avoid to use the delay function
-    long t= millis();       // read the time
-    if (t>storedTime+5000){
-      counter++;            // increase counter by 1
-      if (counter>20) counter=0;    // limit = 20
-      storedTime = t; 
-      virtuino.vMemoryWrite(12,counter);      // write counter to virtual pin V12
-    }
+//    long t= millis();       // read the time
+//    if (t>storedTime+5000){
+//      counter++;            // increase counter by 1
+//      if (counter>20) counter=0;    // limit = 20
+//      storedTime = t; 
+//      virtuino.vMemoryWrite(12,counter);      // write counter to virtual pin V12
+//    }
 // virtuino end code
 
   towingOn = 1;
 //  readSpeed(); // maybe it's better to read wire speed and state always, not according to towing is On/Off...
 
   if ((millis() - statePrintOutTime) > printOutDelay) {
-//    if (statePrintOutTime == 0) 
-//    {
-//      lcd.setCursor(0,1);
-//      lcd.print ("               ");
-//      lcd.setCursor(12,1);
-//      lcd.print ("km/h");
-//    }
+    if (statePrintOutTime == 0) 
+    {
+      lcd.setCursor(0,1);
+      lcd.print ("               ");
+      lcd.setCursor(12,1);
+      lcd.print ("km/h");
+    }
     readScale();
     
-//    if (towingOn == 1) {
-//      printSpeed();
-//    }
+    if (towingOn == 1) {
+      printSpeed();
+    }
     statePrintOutTime = millis();
     Serial.println();
   }
@@ -345,65 +348,74 @@ void printTime()
 
 void resetScale()
 {
-//  scale.set_scale();
-//  scale.tare();  //Reset the scale to 0
-//
-//  long zero_factor = scale.read_average(); //Get a baseline reading
-//  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
-//  Serial.println(zero_factor);
+  scale.set_scale();
+  scale.tare();  //Reset the scale to 0
+//  scale.setup();
+
+  long zero_factor = scale.read_average(); //Get a baseline reading
+//  long zero_factor = scale.readRaw();
+  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+  Serial.println(zero_factor);
 }
 
-void readScale()
 {
-//  scale.set_scale(calibration_factor); //Adjust to this calibration factor
-//
-//  Serial.print("Laikas nuo starto: ");
-//  printTime();
-//  double traction = 1.15 * weight * scale.get_units(); // daugiklis prinktas be virsutinio kasetės ritinuko, virvė eina tiesiai per vamzdžio centrą.
-//                                                    
-//  if (traction < 0) {
-//    Serial.print(", Neigiama:");
-//    Serial.println(traction);
-//    traction = lastTraction;
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+
+//  scale.powerUp();
+
+  // wait for the chip to become ready
+//  while (!scale.isReady());
+  
+  Serial.print("Laikas nuo starto: ");
+  printTime();
+  double traction = 1.15 * weight * scale.get_units(); // daugiklis prinktas be virsutinio kasetės ritinuko, virvė eina tiesiai per vamzdžio centrą.
+//  double traction = - 1.15 * weight * scale.readRaw();
+
+                                                    
+  if (traction < 0) {
+    Serial.print(", Neigiama:");
+    Serial.println(traction);
+    traction = lastTraction;
+  } else {
+    lastTraction = traction;
+  }
+  long tracForce = (long)traction;
+
+//  lcd.setCursor(0,0);
+//  lcd.print ("             ");
+//  lcd.setCursor(0,0);
+  long analogTrac = round(traction/10);
+  long phase = 0;
+  while (phase < analogTrac && analogTrac > 0)
+  {
+//    lcd.print ("@");
+    phase = phase + 1;
+  }
+  
+  Serial.print(", Trauka long: ");
+  Serial.print(tracForce);
+  
+  Serial.print(", Trauka: ");
+  Serial.print(traction, weightDelimiter); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
+  Serial.print("(");
+  Serial.print(traction);
+  Serial.print(")");
+  
+//  lcd.setCursor(13,0);
+//  lcd.print ("   ");
+
+//  if (traction < 10) {
+//    lcd.setCursor(15,0);  
+//  } else if (traction < 100) {
+//    lcd.setCursor(14,0);  
 //  } else {
-//    lastTraction = traction;
-//  }
-//  long tracForce = (long)traction;
-//
-////  lcd.setCursor(0,0);
-////  lcd.print ("             ");
-////  lcd.setCursor(0,0);
-//  long analogTrac = round(traction/10);
-//  long phase = 0;
-//  while (phase < analogTrac && analogTrac > 0)
-//  {
-////    lcd.print ("@");
-//    phase = phase + 1;
+//    lcd.setCursor(13,0);
 //  }
 //  
-//  Serial.print(", Trauka long: ");
-//  Serial.print(tracForce);
-//  
-//  Serial.print(", Trauka: ");
-//  Serial.print(traction, weightDelimiter); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
-//  Serial.print("(");
-//  Serial.print(traction);
-//  Serial.print(")");
-//  
-////  lcd.setCursor(13,0);
-////  lcd.print ("   ");
-//
-////  if (traction < 10) {
-////    lcd.setCursor(15,0);  
-////  } else if (traction < 100) {
-////    lcd.setCursor(14,0);  
-////  } else {
-////    lcd.setCursor(13,0);
-////  }
-////  
-////  lcd.print (traction, weightDelimiter);
-//  virtuino.vMemoryWrite(2,traction);
-//
-//  Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
-//  Serial.println();
+//  lcd.print (traction, weightDelimiter);
+  virtuino.vMemoryWrite(2,traction);
+
+  Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+  Serial.println();
+//  scale.powerDown();
 }
