@@ -117,7 +117,7 @@ double wireLength = 0;
 
 double lastTraction = 0;
 
-HX711 scale(DOUT, CLK);
+//HX711 scale(DOUT, CLK);
 
 void setup() {
 
@@ -137,7 +137,7 @@ void setup() {
   Serial.println("Now lets begin scale initialisation");
   Serial.println("Succeeded scale initialisation");
   // scale with HX711 calibration on each start, which makes scale to ZERO possition
-  resetScale();
+//  resetScale();
 
   setupVirtuino();
 }
@@ -393,75 +393,75 @@ void printTime()
 
 void resetScale()
 {
-  scale.set_scale();
-  scale.tare();  //Reset the scale to 0
-//  scale.setup();
-
-  long zero_factor = scale.read_average(); //Get a baseline reading
-//  long zero_factor = scale.readRaw();
-  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
-  Serial.println(zero_factor);
+//  scale.set_scale();
+//  scale.tare();  //Reset the scale to 0
+////  scale.setup();
+//
+//  long zero_factor = scale.read_average(); //Get a baseline reading
+////  long zero_factor = scale.readRaw();
+//  Serial.print("Zero factor: "); //This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+//  Serial.println(zero_factor);
 }
 
 void readScale() 
 {
-  scale.set_scale(calibration_factor); //Adjust to this calibration factor
-
-//  scale.powerUp();
-
-  // wait for the chip to become ready
-//  while (!scale.isReady());
-  
-  Serial.print("Laikas nuo starto: ");
-  printTime();
-  double traction = 1.15 * weight * scale.get_units(); // daugiklis prinktas be virsutinio kasetės ritinuko, virvė eina tiesiai per vamzdžio centrą.
-//  double traction = - 1.15 * weight * scale.readRaw();
-
-                                                    
-  if (traction < 0) {
-    Serial.print(", Neigiama:");
-    Serial.println(traction);
-    traction = lastTraction;
-  } else {
-    lastTraction = traction;
-  }
-  long tracForce = (long)traction;
-
-//  lcd.setCursor(0,0);
-//  lcd.print ("             ");
-//  lcd.setCursor(0,0);
-  long analogTrac = round(traction/10);
-  long phase = 0;
-  while (phase < analogTrac && analogTrac > 0)
-  {
-//    lcd.print ("@");
-    phase = phase + 1;
-  }
-  
-  Serial.print(", Trauka long: ");
-  Serial.print(tracForce);
-  
-  Serial.print(", Trauka: ");
-  Serial.print(traction, weightDelimiter); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
-  Serial.print("(");
-  Serial.print(traction);
-  Serial.print(")");
-  
-//  lcd.setCursor(13,0);
-//  lcd.print ("   ");
-
-//  if (traction < 10) {
-//    lcd.setCursor(15,0);  
-//  } else if (traction < 100) {
-//    lcd.setCursor(14,0);  
+//  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+//
+////  scale.powerUp();
+//
+//  // wait for the chip to become ready
+////  while (!scale.isReady());
+//  
+//  Serial.print("Laikas nuo starto: ");
+//  printTime();
+//  double traction = 1.15 * weight * scale.get_units(); // daugiklis prinktas be virsutinio kasetės ritinuko, virvė eina tiesiai per vamzdžio centrą.
+////  double traction = - 1.15 * weight * scale.readRaw();
+//
+//                                                    
+//  if (traction < 0) {
+//    Serial.print(", Neigiama:");
+//    Serial.println(traction);
+//    traction = lastTraction;
 //  } else {
-//    lcd.setCursor(13,0);
+//    lastTraction = traction;
+//  }
+//  long tracForce = (long)traction;
+//
+////  lcd.setCursor(0,0);
+////  lcd.print ("             ");
+////  lcd.setCursor(0,0);
+//  long analogTrac = round(traction/10);
+//  long phase = 0;
+//  while (phase < analogTrac && analogTrac > 0)
+//  {
+////    lcd.print ("@");
+//    phase = phase + 1;
 //  }
 //  
-//  lcd.print (traction, weightDelimiter);
-  virtuino.vMemoryWrite(VTRACTION,traction);
-
-  Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
-  Serial.println();
-//  scale.powerDown();
+//  Serial.print(", Trauka long: ");
+//  Serial.print(tracForce);
+//  
+//  Serial.print(", Trauka: ");
+//  Serial.print(traction, weightDelimiter); // used default lbs to kg fraction (0.453592), later we need to calculate it more acuratly to the phisical error we want to have for accuracy/precision
+//  Serial.print("(");
+//  Serial.print(traction);
+//  Serial.print(")");
+//  
+////  lcd.setCursor(13,0);
+////  lcd.print ("   ");
+//
+////  if (traction < 10) {
+////    lcd.setCursor(15,0);  
+////  } else if (traction < 100) {
+////    lcd.setCursor(14,0);  
+////  } else {
+////    lcd.setCursor(13,0);
+////  }
+////  
+////  lcd.print (traction, weightDelimiter);
+//  virtuino.vMemoryWrite(VTRACTION,traction);
+//
+//  Serial.print(" kg"); //Change this to kg and re-adjust the calibration factor if you follow SI units like a sane person
+//  Serial.println();
+////  scale.powerDown();
 }
